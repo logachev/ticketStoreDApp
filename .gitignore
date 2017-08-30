@@ -1,0 +1,3 @@
+build/contracts/*
+web/node_modules/*
+web/ticketsale.json
