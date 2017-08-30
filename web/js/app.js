@@ -1,51 +1,68 @@
 App = {
+  web3: null,
   web3Provider: null,
   contracts: {},
   contractInstance: null,
+  defaultAccount: "",
+  accounts: [],
+
   init: function() {
+    App.initWeb3();
+    App.bindEvents();
+  },
+
+  initWeb3: function() {
+    // Configure web3 provider. Use private testrpc address in this example.
+    App.web3 = new Web3(App.web3Provider);
+    App.web3Provider = new App.web3.providers.HttpProvider('http://localhost:8545');
+    App.web3.setProvider(App.web3Provider);
+
+    // Read 'default' account data. In this example we use 'default' account as ticket issuing account.
+    App.web3.eth.getAccounts(function(error, result){
+      if (!error)
+      {
+        defaultAccount = result[0];
+        accounts = result;
+
+        // Configure accounts drop down menu
+        var selectMenu = document.getElementById('select-accounts');;
+        accounts.forEach(function(item){
+          var option = document.createElement("option");
+          option.text = item;
+          selectMenu.appendChild(option);
+        });
+
+        App.initContract();
+      }
+    });
+  },
+
+  initContract: function() {
     $.getJSON('http://localhost:8000/TicketSale.json', function(data) {
       // Get the necessary contract artifact file and instantiate it with truffle-contract.
-      var TicketSaleArtifact = data;
-      App.contracts.TicketSale = TruffleContract(TicketSaleArtifact);
+      App.contracts.TicketSale = TruffleContract(data);
       // Set the provider for our contract.
       App.contracts.TicketSale.setProvider(App.web3Provider);
       // Use our contract to retieve and mark the adopted pets.
-      App.contracts.TicketSale.defaults({from: "0x6a9641990d49089118f8e35e0557ff3e1245f85d",
+      App.contracts.TicketSale.defaults({from: defaultAccount,
                                          gas: 1000000});
 
       App.contracts.TicketSale.deployed().then(function(instance){
         App.contractInstance = instance;
-        App.enumerateConcerts(instance, 0);
+        App.loadConcerts();
       });
     });
+  },
 
-    return App.initWeb3();
+  loadConcerts: function(){
+    App.contractInstance.getConcertCount.call().then(function(count){
+      for (id = 0; id < count; id++){
+        App.loadConcert(id);
+      }
+    });      
   },
-  initWeb3: function() {
-    // Initialize web3 and set the provider to the testRPC.
-    if (false && typeof web3 !== 'undefined') {
-      web3 = new Web3(web3.currentProvider);
-      App.web3Provider = web3.currentProvider;
-
-      console.log('1');
-    } else {
-      // set the provider you want from Web3.providers
-      web3 = new Web3(App.web3Provider);
-      App.web3Provider = new web3.providers.HttpProvider('http://localhost:8545');
-      console.log('2');
-    }
-    return App.initContract();
-  },
-  initContract: function() {
-    return App.bindEvents();
-  },
-  bindEvents: function() {
-    $(document).on('click', '.btn-buy', App.buyTicket);
-    $(document).on('click', '.btn-createConcert', App.createConcert);
-    $(document).on('click', '.btn-checkTicket', App.checkTicket);
-  },
-  enumerateConcerts: function(instance, id) {
-    instance.getConcertData.call(id).then(function(result){
+  loadConcert: function(id){
+    App.contractInstance.getConcertData.call(id).then(function(result){
       var concertRow = $('#concertsRow');
       var concertTemplate = $('#concertTemplate');
   
@@ -57,14 +74,19 @@ App = {
       concertTemplate.find('.btn-buy').attr('data-id', id);;
       
       concertRow.append(concertTemplate.html());      
-
-      App.enumerateConcerts(instance, id + 1);
     });
+  },
+
+  bindEvents: function() {
+    $(document).on('click', '.btn-buy', App.buyTicket);
+    $(document).on('click', '.btn-createConcert', App.createConcert);
+    $(document).on('click', '.btn-checkTicket', App.checkTicket);
   },
   buyTicket: function() {
     event.preventDefault();
     var concertId = parseInt($(event.target).data('id'));
-    var buyer = document.getElementById("buyer").value;
+    var buyer = document.getElementById("select-accounts").value;
+    console.log(typeof(buyer));
     App.contractInstance.sellTickets(concertId, 1, buyer);
   },
   createConcert: function() {
@@ -74,7 +96,7 @@ App = {
   },
   checkTicket: function(){
     var concertId = document.getElementById("check-concertId").value;
-    var buyer = document.getElementById("check-buyer").value;
+    var buyer = document.getElementById("select-accounts").value;
     App.contractInstance.hasTicket.call(concertId, buyer).then(function(result){
       var button = document.getElementById("btn-checkTicket");
       if (result){

@@ -39,6 +39,10 @@ contract TicketSale {
         delete concerts[concertId];
     }
 
+    function getConcertCount() returns(uint) {
+        return uniqueConcertId;
+    }
+
     function getConcertData(uint concertId) returns(string bandName, uint totalTickets, uint soldTickets) {
         require(isConcertExist(concertId));
 
@@ -50,8 +54,8 @@ contract TicketSale {
     }
 
     function sellTickets(uint concertId, uint count, address buyer) {
-        require(concerts[concertId].totalTickets != 0);
-        require((concerts[concertId].totalTickets) >= (concerts[concertId].soldTickets + count));
+        //require(concerts[concertId].totalTickets != 0);
+        //require((concerts[concertId].totalTickets) >= (concerts[concertId].soldTickets + count));
 
         // Reserve tickets
         concerts[concertId].soldTickets += count;
