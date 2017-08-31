@@ -54,8 +54,8 @@ contract TicketSale {
     }
 
     function sellTickets(uint concertId, uint count, address buyer) {
-        //require(concerts[concertId].totalTickets != 0);
-        //require((concerts[concertId].totalTickets) >= (concerts[concertId].soldTickets + count));
+        require(concerts[concertId].totalTickets != 0);
+        require((concerts[concertId].totalTickets) >= (concerts[concertId].soldTickets + count));
 
         // Reserve tickets
         concerts[concertId].soldTickets += count;
@@ -89,5 +89,30 @@ contract TicketSale {
         }
 
         return total;               
+    }
+
+    function getTotalTicketsByOwnerForConcert(uint concertId, address buyer) returns(uint) {
+        uint total = 0;
+        for (uint i = 0; i < tickets.length; i++) {
+            if ((tickets[i].owner == buyer) && (tickets[i].concertId == concertId)) {
+                total++;
+            }            
+        }
+
+        return total;               
+    }
+
+    function resellTicket(uint concertId, address buyer, uint ticketCount) {
+        uint totalTickets = getTotalTicketsByOwnerForConcert(concertId, msg.sender);
+
+        require(totalTickets >= ticketCount);
+
+        uint sold = 0;
+        for (uint i = 0; i < tickets.length && sold < ticketCount; i++) {
+            if ((tickets[i].owner == msg.sender) && (tickets[i].concertId == concertId)) {
+                tickets[i].owner = buyer;
+                sold++;
+            }            
+        }
     }
 }
